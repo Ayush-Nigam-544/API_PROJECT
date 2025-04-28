@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: student-api:1.0.0
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=sqlite:////app/students.db  # Use the container path for the database file
+      - FLASK_ENV=development  # Set Flask environment to development
+      - FLASK_APP=app           # Set the Flask app entry point
+    volumes:
+      - ./students.db:/app/students.db  # Mount the SQLite database to the container
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/healthcheck"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
