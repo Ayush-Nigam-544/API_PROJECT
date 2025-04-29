@@ -34,3 +34,13 @@ clean:
 healthcheck:
 	@echo "Checking the health of the API..."
 	curl -f http://localhost:5000/api/v1/healthcheck || echo "Healthcheck failed"
+
+# Run tests
+test:
+    @echo "Running tests..."
+    pytest tests/
+
+# Perform code linting
+lint:
+    @echo "Performing code linting..."
+    flake8 .

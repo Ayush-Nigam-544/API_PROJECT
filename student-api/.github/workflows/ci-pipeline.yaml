@@ -1,0 +1,50 @@
+name: CI Pipeline
+
+on:
+  push:
+    paths:
+      - 'student-api/**' # Trigger only when changes are made in the 'student-api' directory
+  workflow_dispatch: # Allow manual triggering of the pipeline
+
+jobs:
+  ci-pipeline:
+    runs-on: self-hosted # Use the self-hosted runner
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Check if the SQLite database exists
+      - name: Check Database
+        run: make check-db
+
+      # Build the API
+      - name: Build API
+        run: make build-api
+
+      # Run tests
+      - name: Run Tests
+        run: |
+          if make test; then
+            echo "Tests passed."
+          else
+            echo "Tests failed."
+            exit 1
+          fi
+
+      # Perform code linting
+      - name: Code Linting
+        run: make lint
+
+      # Docker login
+      - name: Docker Login
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+
+      # Docker build and push
+      - name: Docker Build and Push
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/student-api:latest .
+          docker push ${{ secrets.DOCKER_USERNAME }}/student-api:latest
