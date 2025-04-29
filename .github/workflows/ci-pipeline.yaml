@@ -8,20 +8,39 @@ on:
 
 jobs:
   ci-pipeline:
-    runs-on: self-hosted # Use the self-hosted runner
+    runs-on: self-hosted
     environment: demo
     steps:
-      # Checkout the repository
+      # Checkout the repository into a specific path
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          path: API_PROJECT
 
-      # # Check if the SQLite database exists
-      # - name: Check Database
-      #   run: make check-db
+      # Detect the correct working directory
+      - name: Detect Working Directory
+        id: detect-dir
+        run: |
+          if [ -d "API_PROJECT/student-api" ]; then
+            echo "WORKING_DIR=API_PROJECT/student-api" >> $GITHUB_ENV
+          elif [ -d "student-api" ]; then
+            echo "WORKING_DIR=student-api" >> $GITHUB_ENV
+          else
+            echo "Error: Could not find the student-api directory."
+            exit 1
+          fi
+
+      # Debug the working directory
+      - name: Debug Working Directory
+        run: |
+          echo "Current Directory: $(pwd)"
+          echo "Working Directory: $WORKING_DIR"
+          ls -R $WORKING_DIR
 
       # Build the API
       - name: Build API
         run: make build-api
+        working-directory: ${{ env.WORKING_DIR }}
 
       # Run tests
       - name: Run Tests
@@ -32,10 +51,12 @@ jobs:
             echo "Tests failed."
             exit 1
           fi
+        working-directory: ${{ env.WORKING_DIR }}
 
       # Perform code linting
       - name: Code Linting
         run: make lint
+        working-directory: ${{ env.WORKING_DIR }}
 
       # Docker login
       - name: Docker Login
@@ -49,3 +70,4 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/student-api:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/student-api:latest
+        working-directory: ${{ env.WORKING_DIR }}
