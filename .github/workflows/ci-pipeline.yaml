@@ -21,14 +21,14 @@ jobs:
       - name: Debug Working Directory
         run: |
           echo "Current Directory: $(pwd)"
-          echo "Working Directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api"
-          ls -R C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api
+          echo "Working Directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api"
+          ls -R C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
         shell: powershell
 
       # Build the API
       - name: Build API
         run: make build-api
-        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api
+        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Run tests
       - name: Run Tests
@@ -39,12 +39,12 @@ jobs:
             echo "Tests failed."
             exit 1
           fi
-        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api
+        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Perform code linting
       - name: Code Linting
         run: make lint
-        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api
+        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Docker login
       - name: Docker Login
@@ -58,4 +58,4 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/student-api:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/student-api:latest
-        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api
+        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
