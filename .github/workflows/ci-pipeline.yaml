@@ -20,15 +20,16 @@ jobs:
       # Detect the correct working directory
       - name: Detect Working Directory
         id: detect-dir
+        shell: pwsh
         run: |
-          if [ -d "API_PROJECT/student-api" ]; then
-            echo "WORKING_DIR=API_PROJECT/student-api" >> $GITHUB_ENV
-          elif [ -d "student-api" ]; then
-            echo "WORKING_DIR=student-api" >> $GITHUB_ENV
-          else
-            echo "Error: Could not find the student-api directory."
+          if (Test-Path "API_PROJECT/student-api") {
+            echo "WORKING_DIR=API_PROJECT/student-api" >> $env:GITHUB_ENV
+          } elseif (Test-Path "student-api") {
+            echo "WORKING_DIR=student-api" >> $env:GITHUB_ENV
+          } else {
+            Write-Error "Error: Could not find the student-api directory."
             exit 1
-          fi
+          }
 
       # Debug the working directory
       - name: Debug Working Directory
@@ -36,6 +37,7 @@ jobs:
           echo "Current Directory: $(pwd)"
           echo "Working Directory: $WORKING_DIR"
           ls -R $WORKING_DIR
+        shell: pwsh
 
       # Build the API
       - name: Build API
