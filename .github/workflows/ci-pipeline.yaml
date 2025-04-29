@@ -14,6 +14,12 @@ jobs:
       # Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
+        
+      # Set PowerShell Execution Policy
+      - name: Set PowerShell Execution Policy
+        shell: pwsh
+        run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+        
 
       # Check if the SQLite database exists
       - name: Check Database
