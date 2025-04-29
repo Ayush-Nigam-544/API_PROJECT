@@ -9,6 +9,7 @@ on:
 jobs:
   ci-pipeline:
     runs-on: self-hosted # Use the self-hosted runner
+    environment: demo
     steps:
       # Checkout the repository
       - name: Checkout code
