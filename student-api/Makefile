@@ -1,9 +1,9 @@
 # Targets to manage Docker services
 
 # Check if the SQLite database exists
-check-db: build-api
-	@echo "Checking if the SQLite database exists inside the container..."
-	docker run --rm -v ${PWD}/instance:/app/instance student-api:latest powershell -Command "Write-Host 'Checking path:' (Resolve-Path './instance/students.db'); if (-Not (Test-Path './instance/students.db')) { Write-Host 'Database does not exist. Please create the database first.'; exit 1 } else { Write-Host 'Database exists.' }"
+#check-db: build-api
+#	@echo "Checking if the SQLite database exists inside the container..."
+#	docker run --rm -v ${PWD}/instance:/app/instance student-api:latest powershell -Command "Write-Host 'Checking path:' (Resolve-Path './instance/students.db'); if (-Not (Test-Path './instance/students.db')) { Write-Host 'Database does not exist. Please create the database first.'; exit 1 } else { Write-Host 'Database exists.' }"
 
 # Build the Docker image for the API
 build-api:
