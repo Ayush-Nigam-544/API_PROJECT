@@ -3,9 +3,8 @@
 # Check if the SQLite database exists
 # Check if the SQLite database exists
 check-db:
-	@echo "Checking if the SQLite database exists..."
-	@powershell -Command "if (-Not (Test-Path './instance/students.db')) { Write-Host 'Database does not exist. Please create the database first.'; exit 1 } else { Write-Host 'Database exists.' }"
-
+    @echo "Checking if the SQLite database exists..."
+    @powershell -ExecutionPolicy Bypass -Command "if (-Not (Test-Path './instance/students.db')) { Write-Host 'Database does not exist. Please create the database first.'; exit 1 } else { Write-Host 'Database exists.' }"
 
 # Build the Docker image for the API
 build-api:
