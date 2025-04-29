@@ -17,19 +17,10 @@ jobs:
         with:
           path: API_PROJECT
 
-      # Detect the correct working directory
-      - name: Detect Working Directory
-        id: detect-dir
+      # Set the working directory statically
+      - name: Set Working Directory
+        run: echo "WORKING_DIR=API_PROJECT/API_PROJECT/student-api" >> $env:GITHUB_ENV
         shell: pwsh
-        run: |
-          if (Test-Path "API_PROJECT/API_PROJECT/student-api") {
-            echo "WORKING_DIR=API_PROJECT/API_PROJECT/student-api" >> $env:GITHUB_ENV
-          } elseif (Test-Path "API_PROJECT/student-api") {
-            echo "WORKING_DIR=API_PROJECT/student-api" >> $env:GITHUB_ENV
-          } else {
-            Write-Error "Error: Could not find the student-api directory."
-            exit 1
-          }
 
       # Debug the working directory
       - name: Debug Working Directory
@@ -42,7 +33,7 @@ jobs:
       # Build the API
       - name: Build API
         run: make build-api
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: API_PROJECT/API_PROJECT/student-api
 
       # Run tests
       - name: Run Tests
@@ -53,12 +44,12 @@ jobs:
             echo "Tests failed."
             exit 1
           fi
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: API_PROJECT/API_PROJECT/student-api
 
       # Perform code linting
       - name: Code Linting
         run: make lint
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: API_PROJECT/API_PROJECT/student-api
 
       # Docker login
       - name: Docker Login
@@ -72,4 +63,4 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/student-api:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/student-api:latest
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: API_PROJECT/API_PROJECT/student-api
