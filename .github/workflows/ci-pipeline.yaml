@@ -22,10 +22,10 @@ jobs:
         id: detect-dir
         shell: pwsh
         run: |
-          if (Test-Path "API_PROJECT/student-api") {
+          if (Test-Path "API_PROJECT/API_PROJECT/student-api") {
+            echo "WORKING_DIR=API_PROJECT/API_PROJECT/student-api" >> $env:GITHUB_ENV
+          } elseif (Test-Path "API_PROJECT/student-api") {
             echo "WORKING_DIR=API_PROJECT/student-api" >> $env:GITHUB_ENV
-          } elseif (Test-Path "student-api") {
-            echo "WORKING_DIR=student-api" >> $env:GITHUB_ENV
           } else {
             Write-Error "Error: Could not find the student-api directory."
             exit 1
