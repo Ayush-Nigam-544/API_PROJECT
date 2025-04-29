@@ -56,9 +56,9 @@ jobs:
       #   working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Docker login
-      - name: Docker Login
-        run: echo "Shin544Chan@dummy" | docker login -u "shin544chan" --password-stdin
-        shell: powershell
+      # - name: Docker Login
+      #   run: echo "Shin544Chan@dummy" | docker login -u "shin544chan" --password-stdin
+      #   shell: powershell
       # Docker build and push
       - name: Docker Build and Push
         run: |
