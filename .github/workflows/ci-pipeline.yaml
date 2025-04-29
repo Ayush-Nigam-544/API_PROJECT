@@ -33,12 +33,14 @@ jobs:
       # Run tests
       - name: Run Tests
         run: |
-          if make test; then
+          $result = make test
+          if ($LASTEXITCODE -eq 0) {
             echo "Tests passed."
-          else
+          } else {
             echo "Tests failed."
             exit 1
-          fi
+          }
+        shell: powershell
         working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Perform code linting
