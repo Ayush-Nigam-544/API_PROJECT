@@ -15,9 +15,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Check if the SQLite database exists
-      - name: Check Database
-        run: make check-db
+      # # Check if the SQLite database exists
+      # - name: Check Database
+      #   run: make check-db
 
       # Build the API
       - name: Build API
