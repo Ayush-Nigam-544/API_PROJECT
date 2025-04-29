@@ -15,25 +15,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          path: API_PROJECT
-
-      # Set the working directory statically
-      - name: Set Working Directory
-        run: echo "WORKING_DIR=API_PROJECT/API_PROJECT/student-api" >> $env:GITHUB_ENV
-        shell: pwsh
+          path: student-api
 
       # Debug the working directory
       - name: Debug Working Directory
         run: |
           echo "Current Directory: $(pwd)"
-          echo "Working Directory: $WORKING_DIR"
-          ls -R $WORKING_DIR
-        shell: pwsh
+          echo "Working Directory: student-api"
+          ls -R student-api
+        shell: powershell
 
       # Build the API
       - name: Build API
         run: make build-api
-        working-directory: API_PROJECT/API_PROJECT/student-api
+        working-directory: student-api
 
       # Run tests
       - name: Run Tests
@@ -44,12 +39,12 @@ jobs:
             echo "Tests failed."
             exit 1
           fi
-        working-directory: API_PROJECT/API_PROJECT/student-api
+        working-directory: student-api
 
       # Perform code linting
       - name: Code Linting
         run: make lint
-        working-directory: API_PROJECT/API_PROJECT/student-api
+        working-directory: student-api
 
       # Docker login
       - name: Docker Login
@@ -63,4 +58,4 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/student-api:latest .
           docker push ${{ secrets.DOCKER_USERNAME }}/student-api:latest
-        working-directory: API_PROJECT/API_PROJECT/student-api
+        working-directory: student-api
