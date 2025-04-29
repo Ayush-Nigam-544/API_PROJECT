@@ -17,7 +17,7 @@ jobs:
         
       # Set PowerShell Execution Policy
       - name: Set PowerShell Execution Policy
-        shell: pwsh
+        shell: powershell
         run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
         
 
