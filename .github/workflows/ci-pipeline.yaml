@@ -9,7 +9,7 @@ on:
 jobs:
   ci-pipeline:
     runs-on: self-hosted
-    environment: demo
+    # environment: demo
     steps:
       # Checkout the repository into a specific path
       - name: Checkout code
