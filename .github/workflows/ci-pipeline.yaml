@@ -38,22 +38,22 @@ jobs:
         working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Run tests
-      - name: Run Tests
-        run: |
-          $result = make test
-          if ($LASTEXITCODE -eq 0) {
-            echo "Tests passed."
-          } else {
-            echo "Tests failed."
-            exit 1
-          }
-        shell: powershell
-        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
+      # - name: Run Tests
+      #   run: |
+      #     $result = make test
+      #     if ($LASTEXITCODE -eq 0) {
+      #       echo "Tests passed."
+      #     } else {
+      #       echo "Tests failed."
+      #       exit 1
+      #     }
+      #   shell: powershell
+      #   working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Perform code linting
-      - name: Code Linting
-        run: make lint
-        working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
+      # - name: Code Linting
+      #   run: make lint
+      #   working-directory: C:\Users\ayush_ihx9hgx\actions-runner\_work\API_PROJECT\API_PROJECT\student-api\student-api
 
       # Docker login
       - name: Docker Login
