@@ -1,19 +1,19 @@
 # Targets to manage Docker services
 
 # Check if the SQLite database exists
-check-db:
-	@echo "Checking if the SQLite database exists..."
-	@powershell -Command "if (-Not (Test-Path './instance/students.db')) { Write-Host 'Database does not exist. Please create the database first.'; exit 1 } else { Write-Host 'Database exists.' }"
+check-db: build-api
+	@echo "Checking if the SQLite database exists inside the container..."
+	docker run --rm -v ${PWD}/instance:/app/instance student-api:latest powershell -Command "Write-Host 'Checking path:' (Resolve-Path './instance/students.db'); if (-Not (Test-Path './instance/students.db')) { Write-Host 'Database does not exist. Please create the database first.'; exit 1 } else { Write-Host 'Database exists.' }"
 
 # Build the Docker image for the API
 build-api:
 	@echo "Building the REST API Docker image..."
-	docker-compose build api
+	docker build -t student-api:latest -f Dockerfile .
 
 # Run the REST API container
-run-api: check-db build-api
+run-api: build-api
 	@echo "Starting the REST API container..."
-	docker-compose up -d api  # Start the API service
+	docker-compose up -d api
 
 # Stop all running services
 stop:
@@ -35,10 +35,10 @@ healthcheck:
 
 # Run tests
 test:
-    @echo "Running tests..."
-    pytest tests/
+	@echo "Running tests..."
+	pytest tests/
 
 # Perform code linting
 lint:
-    @echo "Performing code linting..."
-    flake8 .
+	@echo "Performing code linting..."
+	flake8 .
