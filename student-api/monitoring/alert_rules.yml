@@ -1,0 +1,97 @@
+# Alert rules for Student API monitoring
+groups:
+  - name: student-api-alerts
+    rules:
+      # API Health Alerts
+      - alert: APIDown
+        expr: up{job="student-api"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Student API instance is down"
+          description: "Student API instance {{ $labels.instance }} has been down for more than 30 seconds"
+
+      - alert: HighResponseTime
+        expr: http_request_duration_seconds{quantile="0.95"} > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API response time"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.instance }}"
+
+      - alert: HighErrorRate
+        expr: rate(flask_http_request_exceptions_total[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors/sec for {{ $labels.instance }}"
+
+      # Database Alerts
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL database has been down for more than 30 seconds"
+
+      - alert: HighDatabaseConnections
+        expr: postgres_stat_database_numbackends > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of database connections"
+          description: "Database has {{ $value }} active connections"
+
+      # System Resource Alerts
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      - alert: LowDiskSpace
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Load Balancer Alerts
+      - alert: NginxDown
+        expr: up{job="nginx"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nginx load balancer is down"
+          description: "Nginx load balancer has been down for more than 30 seconds"
+
+      - alert: HighNginxConnections
+        expr: nginx_connections_active > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of Nginx connections"
+          description: "Nginx has {{ $value }} active connections"

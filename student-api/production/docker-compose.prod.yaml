@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: student-db
+    environment:
+      POSTGRES_DB: students
+      POSTGRES_USER: student_user
+      POSTGRES_PASSWORD: student_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - student-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U student_user -d students"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # API Container 1
+  student-api-1:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: student-api-1
+    environment:
+      DATABASE_URL: postgresql://student_user:student_password@db:5432/students
+      FLASK_ENV: production
+      FLASK_APP: app
+      PYTHONPATH: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../instance:/app/instance
+      - api_logs:/app/logs
+    networks:
+      - student-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # API Container 2
+  student-api-2:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: student-api-2
+    environment:
+      DATABASE_URL: postgresql://student_user:student_password@db:5432/students
+      FLASK_ENV: production
+      FLASK_APP: app
+      PYTHONPATH: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../instance:/app/instance
+      - api_logs:/app/logs
+    networks:
+      - student-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Nginx Load Balancer
+  nginx:
+    build:
+      context: ../nginx
+      dockerfile: Dockerfile
+    container_name: student-nginx
+    ports:
+      - "8080:8080"
+    depends_on:
+      student-api-1:
+        condition: service_healthy
+      student-api-2:
+        condition: service_healthy
+    volumes:
+      - nginx_logs:/var/log/nginx
+    networks:
+      - student-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  postgres_data:
+    driver: local
+  api_logs:
+    driver: local
+  nginx_logs:
+    driver: local
+
+networks:
+  student-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Base box - Ubuntu 22.04 LTS
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "student-api-prod"
+
+  # Network configuration
+  config.vm.network "private_network", ip: "192.168.56.10"
+  config.vm.network "forwarded_port", guest: 8080, host: 8080, id: "api"
+  config.vm.network "forwarded_port", guest: 5432, host: 5433, id: "postgres"
+  config.vm.network "forwarded_port", guest: 80, host: 8081, id: "nginx"
+
+  # Provider configuration
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "student-api-production"
+    vb.memory = "2048"
+    vb.cpus = 2
+    vb.gui = false
+    
+    # Enable virtualization features
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+  end
+
+  # Sync the entire project to /vagrant
+  config.vm.synced_folder "..", "/vagrant",
+    owner: "vagrant", 
+    group: "vagrant",
+    mount_options: ["dmode=755,fmode=644"]
+
+  # Provisioning script
+  config.vm.provision "shell", path: "setup.sh", privileged: false
+
+  # Post-provision message
+  config.vm.post_up_message = <<-MSG
+    🎉 Student API Production Environment Ready!
+    
+    Access points:
+    - API (Load Balanced): http://localhost:8080
+    - Direct VM Access: http://192.168.56.10:8080
+    - Database: localhost:5433
+    
+    To deploy:
+    1. vagrant ssh
+    2. cd /vagrant
+    3. make deploy-prod
+    
+    Happy coding! 🚀
+  MSG
+end
