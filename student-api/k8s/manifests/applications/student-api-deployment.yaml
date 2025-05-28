@@ -1,0 +1,98 @@
+---
+# Student API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-api
+  namespace: applications
+  labels:
+    app: student-api
+    tier: app
+spec:
+  replicas: 2  # Load balanced across 2 instances
+  selector:
+    matchLabels:
+      app: student-api
+  template:
+    metadata:
+      labels:
+        app: student-api
+        tier: app
+    spec:
+      nodeSelector:
+        type: application  # Deploy on Node A
+      containers:
+      - name: student-api
+        image: student-api:latest
+        imagePullPolicy: Never  # Use local image built by minikube
+        ports:
+        - containerPort: 5000
+          name: api
+        env:
+        - name: FLASK_ENV
+          value: "production"        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: redis-url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-secret
+              key: flask-secret-key
+        - name: API_HOST
+          value: "0.0.0.0"
+        - name: API_PORT
+          value: "5000"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/healthcheck
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ready
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+---
+# Student API Service (Internal ClusterIP)
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-api
+  namespace: applications
+  labels:
+    app: student-api
+    tier: app
+spec:
+  type: ClusterIP  # Internal service accessed via NGINX
+  selector:
+    app: student-api
+  ports:
+  - port: 5000
+    targetPort: 5000
+    name: api

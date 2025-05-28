@@ -1,0 +1,27 @@
+---
+# Namespace for application services (Node A)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: applications
+  labels:
+    type: application
+    tier: app
+---
+# Namespace for database services (Node B)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: database
+  labels:
+    type: database
+    tier: data
+---
+# Namespace for monitoring and dependent services (Node C)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    type: dependent-services
+    tier: services
