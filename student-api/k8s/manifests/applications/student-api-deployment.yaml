@@ -22,7 +22,7 @@ spec:
       nodeSelector:
         type: application  # Deploy on Node A
       containers:
-      - name: student-api
+      - name: student-api        
         image: student-api:latest
         imagePullPolicy: Never  # Use local image built by minikube
         ports:
@@ -30,7 +30,8 @@ spec:
           name: api
         env:
         - name: FLASK_ENV
-          value: "production"        - name: DATABASE_URL
+          value: "production"
+        - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
               name: api-secret
