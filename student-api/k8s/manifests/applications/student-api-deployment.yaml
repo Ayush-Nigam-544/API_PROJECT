@@ -30,7 +30,8 @@ spec:
           name: api
         env:
         - name: FLASK_ENV
-          value: "production"        - name: DATABASE_URL
+          value: "production"        
+        - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
               name: api-secret

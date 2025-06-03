@@ -1,0 +1,115 @@
+# Values file for testing without monitoring
+global:
+  imageRegistry: ""
+  storageClass: ""
+
+# Student API application configuration
+studentApi:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: student-api
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 5000
+    targetPort: 5000
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  
+  env:
+    DATABASE_URL: "postgresql://postgres:password@student-api-helm-postgresql:5432/studentdb"
+    REDIS_URL: "redis://student-api-helm-redis-master:6379"
+    FLASK_ENV: "production"
+
+# NGINX Load Balancer configuration
+nginx:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: nginx
+    tag: "1.21-alpine"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+# PostgreSQL database configuration (using Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "password"
+    username: "postgres"
+    password: "password"
+    database: "studentdb"
+  
+  primary:
+    persistence:
+      enabled: false  # Disable persistence for testing
+    
+    securityContext:
+      enabled: true
+      fsGroup: 1001
+      runAsUser: 1001
+    
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+# Redis configuration (using Bitnami chart)
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: false  # Disable persistence for testing
+    
+    resources:
+      limits:
+        cpu: 300m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+  
+  replica:
+    persistence:
+      enabled: false  # Disable persistence for testing
+
+# Monitoring stack configuration - DISABLED for initial testing
+monitoring:
+  enabled: false
+
+# Prometheus and Grafana (using kube-prometheus-stack) - DISABLED for initial testing
+kube-prometheus-stack:
+  enabled: false
+
+# Namespace configuration
+namespace:
+  create: false
+  name: "student-api-helm"
