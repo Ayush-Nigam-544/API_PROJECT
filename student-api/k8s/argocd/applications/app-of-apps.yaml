@@ -15,8 +15,8 @@ spec:
   
   # Source configuration
   source:
-    repoURL: https://github.com/your-username/API_PROJECT
-    targetRevision: HEAD
+    repoURL: https://github.com/Ayush-Nigam-544/API_PROJECT.git
+    targetRevision: argocd
     path: student-api/k8s/argocd/applications
     
     # Directory-based source
@@ -84,7 +84,7 @@ spec:
   
   # Source repositories
   sourceRepos:
-    - https://github.com/your-username/API_PROJECT
+    - https://github.com/Ayush-Nigam-544/API_PROJECT.git
     - https://charts.bitnami.com/bitnami  # For Redis, PostgreSQL charts
   
   # Allowed destinations

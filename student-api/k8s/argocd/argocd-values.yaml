@@ -1,102 +1,63 @@
-# ArgoCD Helm Chart Values
-# This file configures the ArgoCD installation with GitOps best practices
+# ArgoCD Helm Chart Values for GitOps, node-specific deployment, and declarative management
 
 # Global configuration
-global:
-  image:
-    tag: "v2.12.3"  # Pin to stable version
-  
-# ArgoCD Server Configuration
+# (No global image override, use chart defaults)
+
 server:
-  # Enable insecure mode for internal cluster access
-  insecure: true
-  
-  # Node selector to deploy on dependent_services node
   nodeSelector:
     type: "dependent_services"
-  
-  # Tolerations for dependent_services node if needed
   tolerations: []
-  
-  # Service configuration
   service:
     type: NodePort
     nodePortHttp: 30080
     nodePortHttps: 30443
-  
-  # Ingress configuration (disabled for NodePort setup)
   ingress:
     enabled: false
-  
-  # Additional server arguments
   extraArgs:
     - --insecure
+  # Optionally, set resources/limits here
 
-# Repository Server Configuration
-repoServer:
-  nodeSelector:
-    type: "dependent_services"
-  
-  tolerations: []
-
-# Application Controller Configuration
 controller:
   nodeSelector:
     type: "dependent_services"
-  
   tolerations: []
-  
-  # Controller configuration
-  config:
-    # Increase sync timeout for large applications
-    timeout.reconciliation: 300s
-    timeout.hard.reconciliation: 0s
 
-# Redis Configuration
+repoServer:
+  nodeSelector:
+    type: "dependent_services"
+  tolerations: []
+
 redis:
   nodeSelector:
     type: "dependent_services"
-  
   tolerations: []
 
-# Dex (OIDC) Configuration - disabled for simplicity
-dex:
-  enabled: false
-
-# Notifications controller
-notifications:
-  enabled: true
-  nodeSelector:
-    type: "dependent_services"
-  tolerations: []
-
-# ApplicationSet controller
 applicationSet:
   enabled: true
   nodeSelector:
     type: "dependent_services"
   tolerations: []
 
-# Additional ArgoCD configuration
-configs:
-  # Configure default project settings
-  params:
-    # Enable local users (admin)
-    accounts.admin: apiKey, login
-    
-    # Server configuration
-    server.insecure: true
-    server.rootpath: /
-    
-    # Repository server configuration
-    reposerver.parallelism.limit: 10
-    
-    # Application controller configuration
-    application.instanceLabelKey: argocd.argoproj.io/instance
+notifications:
+  enabled: true
+  nodeSelector:
+    type: "dependent_services"
+  tolerations: []
 
-# RBAC Configuration
+dex:
+  enabled: false
+
+configs:
+  params:
+    server.insecure: true
+    accounts.admin: apiKey,login
+    application.instanceLabelKey: argocd.argoproj.io/instance
+  cm:
+    # Enable auto-sync by default for all apps (can be overridden per app)
+    accounts.admin: apiKey,login
+    # Optionally, set resource customizations, RBAC, etc.
+
 rbac:
-  # Configure RBAC policies
   policy.default: role:readonly
   policy.csv: |
     p, role:admin, applications, *, */*, allow

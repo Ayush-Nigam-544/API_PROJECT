@@ -22,8 +22,8 @@ spec:
   
   # Source configuration
   source:
-    repoURL: https://github.com/your-username/API_PROJECT
-    targetRevision: HEAD
+    repoURL: https://github.com/Ayush-Nigam-544/API_PROJECT.git
+    targetRevision: argocd
     path: student-api/k8s/helm-charts/student-api-stack
     
     # Helm configuration
@@ -107,9 +107,9 @@ spec:
   # Info section for additional metadata
   info:
     - name: "Repository"
-      value: "https://github.com/your-username/API_PROJECT"
+      value: "https://github.com/Ayush-Nigam-544/API_PROJECT.git"
     - name: "Documentation"
-      value: "https://github.com/your-username/API_PROJECT/blob/main/README.md"
+      value: "https://github.com/Ayush-Nigam-544/API_PROJECT/blob/argocd/README.md"
     - name: "Environment"
       value: "Development"
     - name: "Owner"
@@ -131,7 +131,7 @@ metadata:
 type: Opaque
 stringData:
   type: git
-  url: https://github.com/your-username/API_PROJECT
+  url: https://github.com/Ayush-Nigam-544/API_PROJECT.git
   # For public repositories, no credentials needed
   # For private repositories, add:
   # username: your-github-username
