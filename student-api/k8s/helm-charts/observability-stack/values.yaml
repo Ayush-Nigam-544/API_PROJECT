@@ -1,0 +1,307 @@
+# =============================================================================
+# PLG (Promtail, Loki, Grafana) + Prometheus Observability Stack
+# Helm chart-based configuration using official charts
+# =============================================================================
+
+# Global configuration
+global:
+  storageClass: "standard"
+  
+# Node selector for dependent_services node
+nodeSelector:
+  node-role: "dependent_services"
+
+# =============================================================================
+# PROMETHEUS - Metrics Collection
+# =============================================================================
+prometheus:
+  enabled: true
+  
+  prometheus-node-exporter:
+    enabled: true
+  
+  kube-state-metrics:
+    enabled: true
+  
+  server:
+    nodeSelector:
+      node-role: "dependent_services"
+    
+    retention: "7d"
+    
+    persistentVolume:
+      enabled: false
+    
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+  serverFiles:
+    prometheus.yml:
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+
+      scrape_configs:
+        # Kubernetes components
+        - job_name: 'kubernetes-apiservers'
+          kubernetes_sd_configs:
+            - role: endpoints
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+              action: keep
+              regex: default;kubernetes;https
+
+        - job_name: 'kubernetes-nodes'
+          kubernetes_sd_configs:
+            - role: node
+          scheme: https
+          tls_config:
+            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+          relabel_configs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(.+)
+
+        - job_name: 'kubernetes-pods'
+          kubernetes_sd_configs:
+            - role: pod
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+              action: keep
+              regex: true
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+              action: replace
+              target_label: __metrics_path__
+              regex: (.+)
+
+        # Student API metrics
+        - job_name: 'student-api'
+          static_configs:
+            - targets: ['student-api-stack-api.default.svc.cluster.local:3000']
+          metrics_path: '/metrics'
+          scrape_interval: 10s
+
+        # PostgreSQL metrics
+        - job_name: 'postgres-exporter'
+          static_configs:
+            - targets: ['observability-stack-prometheus-postgres-exporter.observability.svc.cluster.local:9187']
+
+        # Blackbox exporter for endpoint monitoring
+        - job_name: 'blackbox-http'
+          metrics_path: /probe
+          params:
+            module: [http_2xx]
+          static_configs:
+            - targets:
+              - http://student-api-stack-api.default.svc.cluster.local:3000/health
+              - http://argocd-server.argocd.svc.cluster.local:80
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: observability-stack-prometheus-blackbox-exporter.observability.svc.cluster.local:9115
+
+# =============================================================================
+# GRAFANA - Visualization & Dashboards
+# =============================================================================
+grafana:
+  enabled: true
+  
+  nodeSelector:
+    node-role: "dependent_services"
+  
+  admin:
+    user: admin
+    password: "admin123"
+  
+  persistence:
+    enabled: false
+  
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://observability-stack-prometheus-server.observability.svc.cluster.local:80
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://observability-stack-loki.observability.svc.cluster.local:3100
+          access: proxy
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+  service:
+    type: NodePort
+    nodePort: 32000
+
+# =============================================================================
+# LOKI - Log Aggregation
+# =============================================================================
+loki:
+  enabled: true
+  
+  deploymentMode: SingleBinary
+  
+  loki:
+    auth_enabled: false
+    
+    commonConfig:
+      replication_factor: 1
+    
+    storage:
+      type: 'filesystem'
+    
+    limits_config:
+      retention_period: 168h  # 7 days
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+
+  singleBinary:
+    nodeSelector:
+      node-role: "dependent_services"
+    
+    persistence:
+      enabled: false
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 300m
+        memory: 512Mi
+
+  chunksCache:
+    enabled: false
+  
+  resultsCache:
+    enabled: false
+
+# =============================================================================
+# PROMTAIL - Log Collection
+# =============================================================================
+promtail:
+  enabled: true
+  
+  config:
+    clients:
+      - url: http://observability-stack-loki.observability.svc.cluster.local:3100/loki/api/v1/push
+    
+    scrape_configs:
+      # Only collect application logs from specific namespaces
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - docker: {}
+        relabel_configs:
+          # Only scrape logs from application namespaces
+          - source_labels: [__meta_kubernetes_namespace]
+            action: keep
+            regex: (default|observability|argocd)
+          
+          # Add labels
+          - action: replace
+            source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node_name
+          - action: replace
+            source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - action: replace
+            source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - action: replace
+            source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# =============================================================================
+# BLACKBOX EXPORTER - Endpoint Monitoring
+# =============================================================================
+blackboxExporter:
+  enabled: true
+  
+  nodeSelector:
+    node-role: "dependent_services"
+  
+  config:
+    modules:
+      http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+          valid_status_codes: [200]
+          method: GET
+          follow_redirects: true
+          preferred_ip_protocol: "ip4"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# =============================================================================
+# POSTGRES EXPORTER - Database Metrics
+# =============================================================================
+postgresExporter:
+  enabled: true
+  
+  nodeSelector:
+    node-role: "dependent_services"
+  
+  config:
+    datasource:
+      host: "postgres.default.svc.cluster.local"
+      port: 5432
+      database: "studentdb"
+      username: "student_user"
+      password: "student_password"
+      sslmode: disable
+    
+    # Auto-discover databases
+    autoDiscoverDatabases: true
+    
+    # Exclude system databases
+    excludeDatabases:
+      - template0
+      - template1
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
