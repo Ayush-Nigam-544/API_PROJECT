@@ -2,3 +2,6 @@
 Include the raw Postgres statefulset and service manifests as-is */}}
 {{- $postgres := .Files.Get "../../../../manifests/database/postgres-statefulset.yaml" }}
 {{ $postgres | nindent 0 }}
+---
+{{- $postgresService := .Files.Get "../../../../manifests/database/postgres-service.yaml" }}
+{{ $postgresService | nindent 0 }}
