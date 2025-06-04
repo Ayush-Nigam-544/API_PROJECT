@@ -7,10 +7,6 @@
 global:
   storageClass: "standard"
 
-# Node selector for all components
-nodeSelector:
-  type: "dependent_services"
-
 # =============================================================================
 # PROMETHEUS - Metrics Collection
 # =============================================================================
