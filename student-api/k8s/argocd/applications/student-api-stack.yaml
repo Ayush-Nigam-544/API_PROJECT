@@ -36,17 +36,21 @@ spec:
       values: |
         # Environment-specific overrides can go here
         # These values will override the default values.yaml
-        
+
+        postgresql:
+          volumePermissions:
+            enabled: true
+        redis:
+          volumePermissions:
+            enabled: true
         # Example overrides:
         # studentApi:
         #   replicaCount: 2
         #   image:
         #     tag: "latest"
-        
         # postgresql:
         #   auth:
         #     database: "student_api"
-        
         # redis:
         #   auth:
         #     enabled: false
