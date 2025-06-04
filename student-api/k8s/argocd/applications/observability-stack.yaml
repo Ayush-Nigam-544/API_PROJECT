@@ -57,8 +57,7 @@ spec:
         
         postgresExporter:
           nodeSelector:
-            node-role: "dependent_services"
-          
+            node-role: "dependent_services"  
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc

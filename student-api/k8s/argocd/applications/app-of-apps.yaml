@@ -86,8 +86,7 @@ spec:
   sourceRepos:
     - https://github.com/Ayush-Nigam-544/API_PROJECT.git
     - https://charts.bitnami.com/bitnami  # For Redis, PostgreSQL charts
-  
-  # Allowed destinations
+    # Allowed destinations
   destinations:
     - namespace: student-api
       server: https://kubernetes.default.svc
@@ -96,6 +95,8 @@ spec:
     - namespace: student-api-test
       server: https://kubernetes.default.svc
     - namespace: monitoring
+      server: https://kubernetes.default.svc
+    - namespace: observability
       server: https://kubernetes.default.svc
   
   # Cluster resource whitelist
