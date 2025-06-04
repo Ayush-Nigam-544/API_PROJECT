@@ -27,8 +27,8 @@ studentApi:
       memory: 256Mi
   
   env:
-    DATABASE_URL: "postgresql://postgres:password@student-api-stack-postgresql:5432/studentdb"
-    REDIS_URL: "redis://student-api-stack-redis-master:6379"
+    DATABASE_URL: "postgresql://postgres:password@postgres.database.svc.cluster.local:5432/studentdb"
+    REDIS_URL: "redis://redis.database.svc.cluster.local:6379"
     FLASK_ENV: "production"
 
 # NGINX Load Balancer configuration
@@ -53,14 +53,6 @@ nginx:
     requests:
       cpu: 100m
       memory: 64Mi
-
-# PostgreSQL database configuration (using Bitnami chart)
-postgresql:
-  enabled: false
-
-# Redis configuration (using Bitnami chart)
-redis:
-  enabled: false
 
 # Monitoring stack configuration
 monitoring:
