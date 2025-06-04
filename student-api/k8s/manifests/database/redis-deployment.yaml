@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
-  namespace: database
+  namespace: student-api
   labels:
     app: redis
     tier: cache
@@ -68,7 +68,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: database
+  namespace: student-api
   labels:
     app: redis
     tier: cache
@@ -78,5 +78,5 @@ spec:
     app: redis
   ports:
   - port: 6379
-    targetPort: 6379
+    targetPort: redis
     name: redis

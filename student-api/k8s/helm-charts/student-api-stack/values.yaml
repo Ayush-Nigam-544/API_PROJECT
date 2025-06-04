@@ -27,8 +27,8 @@ studentApi:
       memory: 256Mi
   
   env:
-    DATABASE_URL: "postgresql://postgres:password@postgres.database.svc.cluster.local:5432/studentdb"
-    REDIS_URL: "redis://redis.database.svc.cluster.local:6379"
+    DATABASE_URL: "postgresql://postgres:password@postgres.student-api.svc.cluster.local:5432/studentdb"
+    REDIS_URL: "redis://redis.student-api.svc.cluster.local:6379"
     FLASK_ENV: "production"
 
 # NGINX Load Balancer configuration
