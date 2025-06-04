@@ -61,6 +61,10 @@ spec:
           value: "latest"  # This will be updated by CI/CD
         - name: environment
           value: "development"
+        - name: postgresql.volumePermissions.enabled
+          value: "true"
+        - name: redis.volumePermissions.enabled
+          value: "true"
   
   # Destination configuration
   destination:
