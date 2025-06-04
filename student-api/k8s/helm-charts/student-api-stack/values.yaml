@@ -24,10 +24,9 @@ studentApi:
       memory: 512Mi
     requests:
       cpu: 200m
-      memory: 256Mi
-  
+      memory: 256Mi  
   env:
-    DATABASE_URL: "postgresql://postgres:password@postgres.student-api.svc.cluster.local:5432/studentdb"
+    DATABASE_URL: "postgresql://student_user:student_password@postgres.student-api.svc.cluster.local:5432/students"
     REDIS_URL: "redis://redis.student-api.svc.cluster.local:6379"
     FLASK_ENV: "production"
 
