@@ -173,6 +173,12 @@ loki:
     enabled: false
   resultsCache:
     enabled: false
+  backend:
+    enabled: false
+  read:
+    enabled: false
+  write:
+    enabled: false  
 
 # =============================================================================
 # PROMTAIL - Log Collection
