@@ -9,7 +9,7 @@ global:
 
 # Node selector for all components
 nodeSelector:
-  node-role: "dependent_services"
+  type: "dependent_services"
 
 # =============================================================================
 # PROMETHEUS - Metrics Collection
@@ -22,20 +22,19 @@ prometheus:
 
   kube-state-metrics:
     enabled: true
-
   server:
     nodeSelector:
-      node-role: "dependent_services"
+      type: "dependent_services"
     retention: "7d"
     persistentVolume:
       enabled: false
     resources:
       requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
         cpu: 200m
         memory: 512Mi
-      limits:
-        cpu: 500m
-        memory: 1Gi
 
     serverFiles:
       prometheus.yml:
@@ -110,7 +109,7 @@ prometheus:
 grafana:
   enabled: true
   nodeSelector:
-    node-role: "dependent_services"
+    type: "dependent_services"
   admin:
     user: admin
     password: "admin123"
@@ -131,11 +130,11 @@ grafana:
           access: proxy
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 128Mi
     limits:
-      cpu: 300m
-      memory: 512Mi
+      cpu: 200m
+      memory: 256Mi
   service:
     type: NodePort
     nodePort: 32000
@@ -177,16 +176,16 @@ loki:
       
   singleBinary:
     nodeSelector:
-      node-role: "dependent_services"
+      type: "dependent_services"
     persistence:
       enabled: false
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 50m
+        memory: 128Mi
       limits:
-        cpu: 300m
-        memory: 512Mi
+        cpu: 200m
+        memory: 256Mi
         
   # Disable components not needed for SingleBinary
   backend:
@@ -246,11 +245,11 @@ promtail:
             target_label: container
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
+      cpu: 25m
+      memory: 64Mi
     limits:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 100m
+      memory: 128Mi
 
 # =============================================================================
 # BLACKBOX EXPORTER - Endpoint Monitoring
@@ -258,7 +257,7 @@ promtail:
 blackboxExporter:
   enabled: true
   nodeSelector:
-    node-role: "dependent_services"
+    type: "dependent_services"
   config:
     modules:
       http_2xx:
@@ -284,7 +283,7 @@ blackboxExporter:
 postgresExporter:
   enabled: true
   nodeSelector:
-    node-role: "dependent_services"
+    type: "dependent_services"
   config:
     datasource:
       host: "postgres.default.svc.cluster.local"
