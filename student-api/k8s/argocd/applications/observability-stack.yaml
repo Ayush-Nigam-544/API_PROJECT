@@ -22,7 +22,8 @@ spec:
     repoURL: https://github.com/Ayush-Nigam-544/API_PROJECT.git
     targetRevision: argocd
     path: student-api/k8s/helm-charts/observability-stack
-      # Helm configuration
+    
+    # Helm configuration
     helm:
       # Use values files
       valueFiles:
