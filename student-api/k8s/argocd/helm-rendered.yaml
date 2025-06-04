@@ -1,0 +1,312 @@
+﻿---
+# Source: student-api-stack/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    type: application
+    tier: app
+---
+# Source: student-api-stack/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: student-api-stack-api-secret
+  namespace: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack-api
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: api
+type: Opaque
+data:
+  # Flask secret key - base64 encoded
+  flask-secret-key: "azhzLXByb2R1Y3Rpb24tc2VjcmV0LWtleQ=="
+  # Database URL - will be set based on PostgreSQL service
+  database-url: "cG9zdGdyZXNxbDovL3Bvc3RncmVzOnBhc3N3b3JkQHBvc3RncmVzLnN0dWRlbnQtYXBpLnN2Yy5jbHVzdGVyLmxvY2FsOjU0MzIvc3R1ZGVudGRi"
+  # Redis URL - will be set based on Redis service  
+  redis-url: "cmVkaXM6Ly9yZWRpcy5zdHVkZW50LWFwaS5zdmMuY2x1c3Rlci5sb2NhbDo2Mzc5"
+---
+# Source: student-api-stack/templates/nginx.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: student-api-stack-nginx-config
+  namespace: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack-nginx
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: loadbalancer
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        upstream student_api {
+            # Load balance between API instances
+            server student-api-stack-api.student-api.svc.cluster.local:5000;
+        }
+        
+        # Rate limiting
+        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+        
+        # Logging format
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for" '
+                        'rt=$request_time uct="$upstream_connect_time" '
+                        'uht="$upstream_header_time" urt="$upstream_response_time"';
+        
+        access_log /var/log/nginx/access.log main;
+        error_log /var/log/nginx/error.log warn;
+        
+        server {
+            listen 80;
+            server_name _;
+            
+            # Health check endpoint for NGINX itself
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+            
+            # Metrics endpoint for Prometheus
+            location /nginx_status {
+                stub_status on;
+                access_log off;
+                allow 127.0.0.1;
+                allow 10.0.0.0/8;
+                deny all;
+            }
+            
+            # API endpoints
+            location /api/ {
+                # Rate limiting
+                limit_req zone=api burst=20 nodelay;
+                
+                # Proxy settings
+                proxy_pass http://student_api;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                # Timeouts
+                proxy_connect_timeout 30s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+                
+                # Health check
+                proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
+            }
+            
+            # Root endpoint redirect
+            location = / {
+                return 301 /api/v1/students;
+            }
+            
+            # Default location
+            location / {
+                return 404 "Not Found\n";
+                add_header Content-Type text/plain;
+            }
+        }
+    }
+---
+# Source: student-api-stack/templates/nginx.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-api-stack-nginx
+  namespace: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack-nginx
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: loadbalancer
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: student-api-stack-nginx
+    app.kubernetes.io/instance: student-api-stack
+---
+# Source: student-api-stack/templates/student-api.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: student-api-stack-api
+  namespace: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack-api
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: api
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: student-api-stack-api
+    app.kubernetes.io/instance: student-api-stack
+---
+# Source: student-api-stack/templates/nginx.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-api-stack-nginx
+  namespace: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack-nginx
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: loadbalancer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: student-api-stack-nginx
+      app.kubernetes.io/instance: student-api-stack
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: student-api-stack-nginx
+        app.kubernetes.io/instance: student-api-stack
+    spec:
+      containers:
+      - name: nginx
+        image: "nginx:1.21-alpine"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: student-api-stack-nginx-config
+---
+# Source: student-api-stack/templates/student-api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: student-api-stack-api
+  namespace: student-api
+  labels:
+    helm.sh/chart: student-api-stack-0.1.0
+    app.kubernetes.io/name: student-api-stack-api
+    app.kubernetes.io/instance: student-api-stack
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: student-api-stack-api
+      app.kubernetes.io/instance: student-api-stack
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: student-api-stack-api
+        app.kubernetes.io/instance: student-api-stack
+    spec:
+      containers:
+      - name: student-api
+        image: "student-api:latest"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 5000
+          protocol: TCP
+        env:
+        - name: FLASK_ENV
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: student-api-stack-api-secret
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: student-api-stack-api-secret
+              key: redis-url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: student-api-stack-api-secret             
+              key: flask-secret-key
+        - name: API_HOST
+          value: "0.0.0.0"
+        - name: API_PORT
+          value: "5000"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /api/v1/healthcheck
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
