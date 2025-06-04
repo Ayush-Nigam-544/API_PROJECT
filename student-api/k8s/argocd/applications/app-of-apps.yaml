@@ -93,10 +93,8 @@ spec:
     - namespace: student-api-dev
       server: https://kubernetes.default.svc
     - namespace: student-api-test
-      server: https://kubernetes.default.svc
+      server: https://kubernetes.default.svc    
     - namespace: monitoring
-      server: https://kubernetes.default.svc
-    - namespace: observability
       server: https://kubernetes.default.svc
   
   # Cluster resource whitelist

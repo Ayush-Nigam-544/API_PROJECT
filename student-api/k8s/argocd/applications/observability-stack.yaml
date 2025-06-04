@@ -54,14 +54,13 @@ spec:
         blackboxExporter:
           nodeSelector:
             node-role: "dependent_services"
-        
-        postgresExporter:
+          postgresExporter:
           nodeSelector:
             node-role: "dependent_services"  
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
-    namespace: observability
+    namespace: monitoring
     
   # Sync policy
   syncPolicy:

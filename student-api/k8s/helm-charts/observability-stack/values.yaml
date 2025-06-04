@@ -88,12 +88,11 @@ prometheus:
           static_configs:
             - targets: ['student-api-stack-api.default.svc.cluster.local:3000']
           metrics_path: '/metrics'
-          scrape_interval: 10s
-
+          scrape_interval: 10s        
         # PostgreSQL metrics
         - job_name: 'postgres-exporter'
           static_configs:
-            - targets: ['observability-stack-prometheus-postgres-exporter.observability.svc.cluster.local:9187']
+            - targets: ['observability-stack-prometheus-postgres-exporter.monitoring.svc.cluster.local:9187']
 
         # Blackbox exporter for endpoint monitoring
         - job_name: 'blackbox-http'
@@ -108,9 +107,8 @@ prometheus:
             - source_labels: [__address__]
               target_label: __param_target
             - source_labels: [__param_target]
-              target_label: instance
-            - target_label: __address__
-              replacement: observability-stack-prometheus-blackbox-exporter.observability.svc.cluster.local:9115
+              target_label: instance            - target_label: __address__
+              replacement: observability-stack-prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
 
 # =============================================================================
 # GRAFANA - Visualization & Dashboards
@@ -131,15 +129,14 @@ grafana:
   datasources:
     datasources.yaml:
       apiVersion: 1
-      datasources:
-        - name: Prometheus
+      datasources:        - name: Prometheus
           type: prometheus
-          url: http://observability-stack-prometheus-server.observability.svc.cluster.local:80
+          url: http://observability-stack-prometheus-server.monitoring.svc.cluster.local:80
           access: proxy
           isDefault: true
         - name: Loki
           type: loki
-          url: http://observability-stack-loki.observability.svc.cluster.local:3100
+          url: http://observability-stack-loki.monitoring.svc.cluster.local:3100
           access: proxy
 
   resources:
@@ -203,10 +200,9 @@ loki:
 # =============================================================================
 promtail:
   enabled: true
-  
-  config:
+    config:
     clients:
-      - url: http://observability-stack-loki.observability.svc.cluster.local:3100/loki/api/v1/push
+      - url: http://observability-stack-loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
     
     scrape_configs:
       # Only collect application logs from specific namespaces
