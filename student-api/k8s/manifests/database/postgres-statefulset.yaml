@@ -87,3 +87,15 @@ spec:
       resources:
         requests:
           storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: database
+spec:
+  ports:
+  - port: 5432
+    targetPort: postgres
+  selector:
+    app: postgres
