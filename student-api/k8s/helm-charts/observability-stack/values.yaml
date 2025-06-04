@@ -12,12 +12,13 @@ global:
 # =============================================================================
 prometheus:
   enabled: true
-
   prometheus-node-exporter:
     enabled: true
 
   kube-state-metrics:
-    enabled: true  server:
+    enabled: true
+
+  server:
     # Temporarily remove node selector for testing
     # nodeSelector:
     #   type: "dependent_services"
@@ -170,7 +171,8 @@ loki:
       enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
-        singleBinary:
+      
+  singleBinary:
     # Temporarily remove node selector for testing
     # nodeSelector:
     #   type: "dependent_services"
