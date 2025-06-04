@@ -32,7 +32,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: db-secret
-              key: postgres-user
+              key: postgres-user        
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -64,7 +64,8 @@ spec:
             - -U
             - $(POSTGRES_USER)
             - -d
-            - $(POSTGRES_DB)          initialDelaySeconds: 5
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 5
           periodSeconds: 5
         resources:
           requests:
