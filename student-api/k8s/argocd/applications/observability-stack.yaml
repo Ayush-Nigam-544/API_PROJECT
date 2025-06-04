@@ -22,41 +22,12 @@ spec:
     repoURL: https://github.com/Ayush-Nigam-544/API_PROJECT.git
     targetRevision: argocd
     path: student-api/k8s/helm-charts/observability-stack
-    
-    # Helm configuration
+      # Helm configuration
     helm:
       # Use values files
       valueFiles:
         - values.yaml
-      
-      # Override values for node affinity
-      values: |
-        # Node selector for dependent_services node
-        global:
-          nodeSelector:
-            node-role: "dependent_services"
         
-        # Apply node selector to all components
-        prometheus:
-          server:
-            nodeSelector:
-              node-role: "dependent_services"
-        
-        grafana:
-          nodeSelector:
-            node-role: "dependent_services"
-        
-        loki:
-          singleBinary:
-            nodeSelector:
-              node-role: "dependent_services"
-        
-        blackboxExporter:
-          nodeSelector:
-            node-role: "dependent_services"
-          postgresExporter:
-          nodeSelector:
-            node-role: "dependent_services"  
   # Destination configuration
   destination:
     server: https://kubernetes.default.svc
