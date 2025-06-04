@@ -40,10 +40,7 @@ spec:
               name: db-secret
               key: postgres-password
         - name: POSTGRES_DB
-          valueFrom:
-            secretKeyRef:
-              name: db-secret
-              key: postgres-db
+          value: studentdb
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
         volumeMounts:
