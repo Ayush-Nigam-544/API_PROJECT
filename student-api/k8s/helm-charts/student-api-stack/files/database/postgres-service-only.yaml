@@ -1,0 +1,17 @@
+# PostgreSQL Service for internal cluster communication
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: student-api
+  labels:
+    app: postgres
+    tier: data
+spec:
+  type: ClusterIP  # Internal only
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
