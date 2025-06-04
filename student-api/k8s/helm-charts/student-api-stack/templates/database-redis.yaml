@@ -1,0 +1,4 @@
+{{/*
+Include the raw Redis deployment and service manifests as-is */}}
+{{- $redis := .Files.Get "../../../../manifests/database/redis-deployment.yaml" }}
+{{ $redis | nindent 0 }}

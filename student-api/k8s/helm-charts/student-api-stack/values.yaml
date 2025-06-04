@@ -56,44 +56,11 @@ nginx:
 
 # PostgreSQL database configuration (using Bitnami chart)
 postgresql:
-  enabled: true
-  auth:
-    postgresPassword: "password"
-    username: "postgres"
-    password: "password"
-    database: "studentdb"
-  
-  primary:
-    persistence:
-      enabled: true
-      size: 8Gi
-    
-    resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
-      requests:
-        cpu: 200m
-        memory: 256Mi
+  enabled: false
 
 # Redis configuration (using Bitnami chart)
 redis:
-  enabled: true
-  auth:
-    enabled: false
-  
-  master:
-    persistence:
-      enabled: true
-      size: 4Gi
-    
-    resources:
-      limits:
-        cpu: 300m
-        memory: 256Mi
-      requests:
-        cpu: 100m
-        memory: 128Mi
+  enabled: false
 
 # Monitoring stack configuration
 monitoring:
