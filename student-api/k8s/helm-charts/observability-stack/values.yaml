@@ -17,10 +17,10 @@ prometheus:
     enabled: true
 
   kube-state-metrics:
-    enabled: true
-  server:
-    nodeSelector:
-      type: "dependent_services"
+    enabled: true  server:
+    # Temporarily remove node selector for testing
+    # nodeSelector:
+    #   type: "dependent_services"
     retention: "7d"
     persistentVolume:
       enabled: false
@@ -104,8 +104,9 @@ prometheus:
 # =============================================================================
 grafana:
   enabled: true
-  nodeSelector:
-    type: "dependent_services"
+  # Temporarily remove node selector for testing
+  # nodeSelector:
+  #   type: "dependent_services"
   admin:
     user: admin
     password: "admin123"
@@ -169,10 +170,10 @@ loki:
       enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
-      
-  singleBinary:
-    nodeSelector:
-      type: "dependent_services"
+        singleBinary:
+    # Temporarily remove node selector for testing
+    # nodeSelector:
+    #   type: "dependent_services"
     persistence:
       enabled: false
     resources:
@@ -252,8 +253,9 @@ promtail:
 # =============================================================================
 blackboxExporter:
   enabled: true
-  nodeSelector:
-    type: "dependent_services"
+  # Temporarily remove node selector for testing
+  # nodeSelector:
+  #   type: "dependent_services"
   config:
     modules:
       http_2xx:
@@ -278,8 +280,9 @@ blackboxExporter:
 # =============================================================================
 postgresExporter:
   enabled: true
-  nodeSelector:
-    type: "dependent_services"
+  # Temporarily remove node selector for testing
+  # nodeSelector:
+  #   type: "dependent_services"
   config:
     datasource:
       host: "postgres.default.svc.cluster.local"
