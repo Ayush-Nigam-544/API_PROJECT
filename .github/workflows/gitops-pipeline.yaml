@@ -1,0 +1,389 @@
+name: CI/CD Pipeline with GitOps
+
+on:
+  push:
+    paths:
+      - 'student-api/**'
+    branches:
+      - main
+      - develop
+      - argocd
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+      force_deploy:
+        description: 'Force deployment even if tests fail'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: student-api
+
+jobs:
+  ci-pipeline:
+    runs-on: self-hosted
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.tag }}
+      image-digest: ${{ steps.docker-build.outputs.digest }}
+      short-sha: ${{ steps.image-tag.outputs.short-sha }}
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: API_PROJECT
+          fetch-depth: 0  # Fetch full history for proper tagging
+
+      # Generate unique image tag based on commit SHA and timestamp
+      - name: Generate Image Tag
+        id: image-tag
+        run: |
+          $COMMIT_SHA = "${{ github.sha }}".Substring(0, 7)
+          $TIMESTAMP = Get-Date -Format "yyyyMMdd-HHmmss"
+          $BRANCH = "${{ github.ref_name }}" -replace '/', '-'
+          $IMAGE_TAG = "${BRANCH}-${COMMIT_SHA}-${TIMESTAMP}"
+          echo "tag=$IMAGE_TAG" >> $env:GITHUB_OUTPUT
+          echo "short-sha=$COMMIT_SHA" >> $env:GITHUB_OUTPUT
+          echo "timestamp=$TIMESTAMP" >> $env:GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $env:GITHUB_OUTPUT
+          Write-Host "Generated image tag: $IMAGE_TAG" -ForegroundColor Green
+        shell: powershell
+
+      # Build the API
+      - name: Build API
+        run: |
+          cd API_PROJECT/student-api
+          Write-Host "🔨 Building Student API..." -ForegroundColor Blue
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          Write-Host "✅ Build completed successfully" -ForegroundColor Green
+        shell: powershell
+
+      # Run tests
+      - name: Run Tests
+        id: tests
+        run: |
+          cd API_PROJECT/student-api
+          Write-Host "🧪 Running tests..." -ForegroundColor Blue
+          
+          # Run pytest with coverage
+          python -m pytest app/tests/ -v --tb=short
+          
+          if ($LASTEXITCODE -ne 0 -and "${{ github.event.inputs.force_deploy }}" -ne "true") {
+            Write-Host "❌ Tests failed and force_deploy is not enabled" -ForegroundColor Red
+            exit 1
+          } elseif ($LASTEXITCODE -ne 0) {
+            Write-Host "⚠️ Tests failed but continuing due to force_deploy=true" -ForegroundColor Yellow
+            echo "test-status=failed" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "✅ All tests passed" -ForegroundColor Green
+            echo "test-status=passed" >> $env:GITHUB_OUTPUT
+          }
+        shell: powershell
+
+      # Build Docker image
+      - name: Build Docker Image
+        id: docker-build
+        run: |
+          cd API_PROJECT/student-api
+          $IMAGE_TAG = "${{ steps.image-tag.outputs.tag }}"
+          $FULL_IMAGE_NAME = "${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$IMAGE_TAG"
+          
+          Write-Host "🐳 Building Docker image: $FULL_IMAGE_NAME" -ForegroundColor Blue
+          
+          docker build -t $FULL_IMAGE_NAME .
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ Docker image built successfully" -ForegroundColor Green
+            echo "image=$FULL_IMAGE_NAME" >> $env:GITHUB_OUTPUT
+            
+            # Get image digest for security and traceability
+            $DIGEST = docker inspect $FULL_IMAGE_NAME --format='{{.Id}}'
+            echo "digest=$DIGEST" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "❌ Docker build failed" -ForegroundColor Red
+            exit 1
+          }
+        shell: powershell
+
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        run: |
+          Write-Host "🔐 Logging into Docker Hub..." -ForegroundColor Blue
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+        shell: powershell
+
+      # Push Docker image
+      - name: Push Docker Image
+        run: |
+          $FULL_IMAGE_NAME = "${{ steps.docker-build.outputs.image }}"
+          Write-Host "📤 Pushing Docker image: $FULL_IMAGE_NAME" -ForegroundColor Blue
+          
+          docker push $FULL_IMAGE_NAME
+          
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ Docker image pushed successfully" -ForegroundColor Green
+          } else {
+            Write-Host "❌ Docker push failed" -ForegroundColor Red
+            exit 1
+          }
+        shell: powershell
+
+      # Security scan (optional)
+      - name: Security Scan
+        continue-on-error: true
+        run: |
+          $FULL_IMAGE_NAME = "${{ steps.docker-build.outputs.image }}"
+          Write-Host "🔍 Running security scan on: $FULL_IMAGE_NAME" -ForegroundColor Blue
+          
+          # Using docker scout (if available) or trivy for vulnerability scanning
+          if (Get-Command docker-scout -ErrorAction SilentlyContinue) {
+            docker scout cves $FULL_IMAGE_NAME
+          } else {
+            Write-Host "⚠️ Docker Scout not available, skipping security scan" -ForegroundColor Yellow
+          }
+        shell: powershell
+
+  # GitOps Update Job
+  gitops-update:
+    needs: ci-pipeline
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/argocd' || github.event_name == 'workflow_dispatch'
+    steps:
+      # Checkout the repository for GitOps updates
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # Configure Git for commits
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git config --global push.default simple
+        shell: powershell
+
+      # Update Helm values with new image tag
+      - name: Update Helm Values
+        id: update-values
+        run: |
+          $IMAGE_TAG = "${{ needs.ci-pipeline.outputs.image-tag }}"
+          $DOCKER_USERNAME = "${{ secrets.DOCKER_USERNAME }}"
+          $VALUES_FILE = "student-api\k8s\helm-charts\student-api-stack\values.yaml"
+          
+          Write-Host "🔄 Updating Helm values with image tag: $IMAGE_TAG" -ForegroundColor Blue
+          
+          # Check if values file exists
+          if (-not (Test-Path $VALUES_FILE)) {
+            Write-Error "Values file not found: $VALUES_FILE"
+            exit 1
+          }
+          
+          # Read current values
+          $content = Get-Content $VALUES_FILE -Raw
+          Write-Host "📄 Current values file content (first 10 lines):" -ForegroundColor Cyan
+          (Get-Content $VALUES_FILE | Select-Object -First 10) | ForEach-Object { Write-Host "  $_" }
+          
+          # Update image repository and tag using more robust regex
+          $repoPattern = '(studentApi:\s*[\r\n]+\s*image:\s*[\r\n]+\s*repository:\s*)[^\r\n]*'
+          $tagPattern = '(studentApi:\s*[\r\n]+\s*image:\s*[\r\n]+(?:\s*repository:[^\r\n]*[\r\n]+)?\s*tag:\s*)[^\r\n]*'
+          
+          $newRepo = "`${1}$DOCKER_USERNAME/student-api"
+          $newTag = "`${1}$IMAGE_TAG"
+          
+          $content = $content -replace $repoPattern, $newRepo
+          $content = $content -replace $tagPattern, $newTag
+          
+          # Write updated content
+          Set-Content -Path $VALUES_FILE -Value $content -NoNewline
+          
+          # Verify changes
+          Write-Host "✅ Updated values.yaml with:" -ForegroundColor Green
+          Write-Host "  Repository: $DOCKER_USERNAME/student-api" -ForegroundColor White
+          Write-Host "  Tag: $IMAGE_TAG" -ForegroundColor White
+          
+          # Show the updated section
+          Write-Host "📄 Updated values file content (studentApi section):" -ForegroundColor Cyan
+          $lines = Get-Content $VALUES_FILE
+          $studentApiStart = $lines | Select-String -Pattern "^studentApi:" | Select-Object -First 1
+          if ($studentApiStart) {
+            $startIndex = $studentApiStart.LineNumber - 1
+            $endIndex = [Math]::Min($startIndex + 10, $lines.Count - 1)
+            for ($i = $startIndex; $i -le $endIndex; $i++) {
+              Write-Host "  $($lines[$i])" -ForegroundColor White
+            }
+          }
+          
+          # Check if there are changes to commit
+          $gitStatus = git status --porcelain
+          if ($gitStatus) {
+            echo "has-changes=true" >> $env:GITHUB_OUTPUT
+            Write-Host "📝 Changes detected in repository" -ForegroundColor Green
+          } else {
+            echo "has-changes=false" >> $env:GITHUB_OUTPUT
+            Write-Host "ℹ️ No changes detected in repository" -ForegroundColor Blue
+          }
+        shell: powershell
+
+      # Commit and push GitOps changes
+      - name: Commit and Push GitOps Changes
+        if: steps.update-values.outputs.has-changes == 'true'
+        run: |
+          $IMAGE_TAG = "${{ needs.ci-pipeline.outputs.image-tag }}"
+          $COMMIT_SHA = "${{ needs.ci-pipeline.outputs.short-sha }}"
+          $TEST_STATUS = "${{ needs.ci-pipeline.result }}"
+          
+          Write-Host "📝 Committing GitOps changes..." -ForegroundColor Blue
+          
+          # Stage changes
+          git add student-api/k8s/helm-charts/student-api-stack/values.yaml
+          
+          # Create detailed commit message
+          $commitMessage = @"
+🚀 GitOps: Update student-api image to $IMAGE_TAG
+
+📊 Deployment Details:
+- Image Tag: $IMAGE_TAG
+- Source Commit: $COMMIT_SHA
+- Build Number: ${{ github.run_number }}
+- Triggered by: ${{ github.actor }}
+- Branch: ${{ github.ref_name }}
+- Test Status: $TEST_STATUS
+
+🔄 Changes:
+- Updated Helm values.yaml with new image tag
+- Ready for ArgoCD automatic sync
+
+🤖 Auto-deployed via GitHub Actions
+"@
+          
+          git commit -m $commitMessage
+          
+          # Push changes with retry logic
+          $retryCount = 0
+          $maxRetries = 3
+          do {
+            try {
+              git push origin ${{ github.ref_name }}
+              Write-Host "✅ GitOps update committed and pushed successfully" -ForegroundColor Green
+              break
+            } catch {
+              $retryCount++
+              if ($retryCount -ge $maxRetries) {
+                Write-Host "❌ Failed to push after $maxRetries attempts" -ForegroundColor Red
+                throw
+              }
+              Write-Host "⚠️ Push failed, retrying... ($retryCount/$maxRetries)" -ForegroundColor Yellow
+              Start-Sleep 5
+              git pull --rebase origin ${{ github.ref_name }}
+            }
+          } while ($retryCount -lt $maxRetries)
+          
+          Write-Host "🔄 ArgoCD will automatically detect and sync the changes" -ForegroundColor Cyan
+        shell: powershell
+
+      # Create deployment summary
+      - name: Deployment Summary
+        run: |
+          $IMAGE_TAG = "${{ needs.ci-pipeline.outputs.image-tag }}"
+          $DOCKER_USERNAME = "${{ secrets.DOCKER_USERNAME }}"
+          $COMMIT_SHA = "${{ needs.ci-pipeline.outputs.short-sha }}"
+          
+          Write-Host "🎉 Deployment Summary" -ForegroundColor Green
+          Write-Host "=========================" -ForegroundColor Green
+          Write-Host "📦 Image: $DOCKER_USERNAME/student-api:$IMAGE_TAG" -ForegroundColor White
+          Write-Host "🔗 Commit: $COMMIT_SHA (${{ github.sha }})" -ForegroundColor White
+          Write-Host "🌿 Branch: ${{ github.ref_name }}" -ForegroundColor White
+          Write-Host "👤 Actor: ${{ github.actor }}" -ForegroundColor White
+          Write-Host "🔢 Workflow: #${{ github.run_number }}" -ForegroundColor White
+          Write-Host "⏰ Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')" -ForegroundColor White
+          Write-Host ""
+          Write-Host "🔄 GitOps Workflow:" -ForegroundColor Cyan
+          Write-Host "1. ✅ Docker image built and pushed" -ForegroundColor White
+          Write-Host "2. ✅ Helm values.yaml updated" -ForegroundColor White
+          Write-Host "3. ✅ Changes committed to Git" -ForegroundColor White
+          Write-Host "4. 🔄 ArgoCD will detect changes and sync automatically" -ForegroundColor White
+          Write-Host ""
+          Write-Host "🌐 ArgoCD Access:" -ForegroundColor Cyan
+          Write-Host "   URL: http://your-cluster-ip:30080" -ForegroundColor White
+          Write-Host "   Application: student-api-stack" -ForegroundColor White
+          Write-Host ""
+          Write-Host "📋 Next Steps:" -ForegroundColor Cyan
+          Write-Host "   • Monitor ArgoCD UI for sync progress" -ForegroundColor White
+          Write-Host "   • Verify application health in Kubernetes" -ForegroundColor White
+          Write-Host "   • Check application logs if needed" -ForegroundColor White
+        shell: powershell
+
+  # Notification Job (optional)
+  notify:
+    needs: [ci-pipeline, gitops-update]
+    runs-on: self-hosted
+    if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/argocd')
+    steps:
+      - name: Send Deployment Notification
+        run: |
+          $STATUS = if ("${{ needs.gitops-update.result }}" -eq "success") { "✅ SUCCESS" } else { "❌ FAILED" }
+          $IMAGE_TAG = "${{ needs.ci-pipeline.outputs.image-tag }}"
+          
+          Write-Host "📢 Deployment Notification" -ForegroundColor Blue
+          Write-Host "Status: $STATUS" -ForegroundColor White
+          Write-Host "Image: $IMAGE_TAG" -ForegroundColor White
+          Write-Host "Commit: ${{ github.sha }}" -ForegroundColor White
+          
+          # Here you could integrate with Slack, Teams, or other notification systems
+          # Example for Slack webhook (if configured):
+          # $payload = @{
+          #     text = "Student API Deployment $STATUS - Image: $IMAGE_TAG"
+          # } | ConvertTo-Json
+          # Invoke-RestMethod -Uri "${{ secrets.SLACK_WEBHOOK_URL }}" -Method Post -Body $payload -ContentType "application/json"
+        shell: powershell
+
+  # Optional: ArgoCD Sync Trigger (if immediate sync is needed)
+  argocd-sync:
+    needs: [ci-pipeline, gitops-update]
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main' && needs.gitops-update.result == 'success'
+    steps:
+      - name: Trigger ArgoCD Sync
+        continue-on-error: true
+        run: |
+          Write-Host "🔄 Triggering immediate ArgoCD sync..." -ForegroundColor Blue
+          
+          # This is optional since ArgoCD auto-sync is enabled
+          # Uncomment and configure if you want immediate sync triggers
+          
+          # $ARGOCD_SERVER = "your-cluster-ip:30080"
+          # $ARGOCD_APP = "student-api-stack"
+          # $ARGOCD_TOKEN = "${{ secrets.ARGOCD_TOKEN }}"
+          
+          # if ($ARGOCD_TOKEN) {
+          #     $headers = @{
+          #         "Authorization" = "Bearer $ARGOCD_TOKEN"
+          #         "Content-Type" = "application/json"
+          #     }
+          #     
+          #     try {
+          #         Invoke-RestMethod -Uri "http://$ARGOCD_SERVER/api/v1/applications/$ARGOCD_APP/sync" -Method Post -Headers $headers
+          #         Write-Host "✅ ArgoCD sync triggered successfully" -ForegroundColor Green
+          #     } catch {
+          #         Write-Host "⚠️ Failed to trigger ArgoCD sync, but auto-sync will handle it" -ForegroundColor Yellow
+          #     }
+          # } else {
+          #     Write-Host "ℹ️ ArgoCD token not configured, relying on auto-sync" -ForegroundColor Blue
+          # }
+          
+          Write-Host "🔄 ArgoCD auto-sync is enabled - changes will be applied automatically" -ForegroundColor Cyan
+          Write-Host "📊 Monitor progress at: http://your-cluster-ip:30080" -ForegroundColor White
+        shell: powershell

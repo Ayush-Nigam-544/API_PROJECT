@@ -1,0 +1,146 @@
+# ArgoCD Application: App-of-Apps
+# This is the root application that manages all other applications using the App-of-Apps pattern
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-of-apps
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: app-of-apps
+    app.kubernetes.io/part-of: student-api
+spec:
+  # Project configuration
+  project: default
+  
+  # Source configuration
+  source:
+    repoURL: https://github.com/your-username/API_PROJECT
+    targetRevision: HEAD
+    path: student-api/k8s/argocd/applications
+    
+    # Directory-based source
+    directory:
+      recurse: true
+      include: "*.yaml"
+      exclude: "app-of-apps.yaml"  # Exclude self to prevent recursion
+  
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true       # Automatically prune resources when removed from Git
+      selfHeal: true    # Automatically sync when cluster state differs from Git
+      allowEmpty: false # Don't sync if no resources found
+    
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    
+    # Retry configuration
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Revision history limit
+  revisionHistoryLimit: 10
+  
+  # Ignore certain differences
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: ""
+      kind: Secret
+      name: argocd-initial-admin-secret
+      jsonPointers:
+        - /data
+
+---
+# ArgoCD AppProject for Student API
+# This defines permissions and restrictions for the student-api applications
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: student-api-project
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: student-api-project
+    app.kubernetes.io/part-of: student-api
+spec:
+  # Project description
+  description: Student API Application Project
+  
+  # Source repositories
+  sourceRepos:
+    - https://github.com/your-username/API_PROJECT
+    - https://charts.bitnami.com/bitnami  # For Redis, PostgreSQL charts
+  
+  # Allowed destinations
+  destinations:
+    - namespace: student-api
+      server: https://kubernetes.default.svc
+    - namespace: student-api-dev
+      server: https://kubernetes.default.svc
+    - namespace: student-api-test
+      server: https://kubernetes.default.svc
+    - namespace: monitoring
+      server: https://kubernetes.default.svc
+  
+  # Cluster resource whitelist
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: storage.k8s.io
+      kind: StorageClass
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+  
+  # Namespace resource whitelist (allow all in designated namespaces)
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  
+  # RBAC roles for this project
+  roles:
+    - name: developer
+      description: Developer access to student-api applications
+      policies:
+        - p, proj:student-api-project:developer, applications, get, student-api-project/*, allow
+        - p, proj:student-api-project:developer, applications, sync, student-api-project/*, allow
+        - p, proj:student-api-project:developer, repositories, get, *, allow
+      groups:
+        - developers
+    
+    - name: admin
+      description: Admin access to student-api applications
+      policies:
+        - p, proj:student-api-project:admin, applications, *, student-api-project/*, allow
+        - p, proj:student-api-project:admin, repositories, *, *, allow
+        - p, proj:student-api-project:admin, clusters, *, *, allow
+      groups:
+        - admins
+  
+  # Sync windows (optional - when to allow syncing)
+  syncWindows:
+    - kind: allow
+      schedule: "* * * * *"  # Always allow
+      duration: 24h
+      applications:
+        - "*"
+      manualSync: true

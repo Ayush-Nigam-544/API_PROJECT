@@ -1,0 +1,138 @@
+# ArgoCD Application: Student API Stack
+# This application deploys the complete Student API stack using Helm
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: student-api-stack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: student-api-stack
+    app.kubernetes.io/part-of: student-api
+    app.kubernetes.io/component: main-application
+  annotations:
+    # Notifications annotations
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: student-api-alerts
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: student-api-alerts
+    # Additional metadata
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # Project configuration
+  project: student-api-project
+  
+  # Source configuration
+  source:
+    repoURL: https://github.com/your-username/API_PROJECT
+    targetRevision: HEAD
+    path: student-api/k8s/helm-charts/student-api-stack
+    
+    # Helm configuration
+    helm:
+      # Use values files
+      valueFiles:
+        - values.yaml
+      
+      # Override values if needed
+      values: |
+        # Environment-specific overrides can go here
+        # These values will override the default values.yaml
+        
+        # Example overrides:
+        # studentApi:
+        #   replicaCount: 2
+        #   image:
+        #     tag: "latest"
+        
+        # postgresql:
+        #   auth:
+        #     database: "student_api"
+        
+        # redis:
+        #   auth:
+        #     enabled: false
+      
+      # Parameters for templating
+      parameters:
+        - name: studentApi.image.tag
+          value: "latest"  # This will be updated by CI/CD
+        - name: environment
+          value: "development"
+  
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: student-api
+  
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true       # Automatically remove resources not in Git
+      selfHeal: true    # Automatically fix drift from desired state
+      allowEmpty: false # Don't sync if no resources found
+    
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true      # Create namespace if it doesn't exist
+      - PrunePropagationPolicy=foreground  # Delete resources in foreground
+      - PruneLast=true           # Prune resources last
+      - ApplyOutOfSyncOnly=true  # Only apply resources that are out of sync
+      - RespectIgnoreDifferences=true  # Respect ignore differences
+    
+    # Retry configuration
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Revision history limit
+  revisionHistoryLimit: 10
+  
+  # Health check configuration
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replica differences (for HPA)
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/clusterIP  # Ignore cluster IP differences
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data  # Ignore secret data differences for auto-generated secrets
+  
+  # Info section for additional metadata
+  info:
+    - name: "Repository"
+      value: "https://github.com/your-username/API_PROJECT"
+    - name: "Documentation"
+      value: "https://github.com/your-username/API_PROJECT/blob/main/README.md"
+    - name: "Environment"
+      value: "Development"
+    - name: "Owner"
+      value: "DevOps Team"
+    - name: "Slack Channel"
+      value: "#student-api-alerts"
+
+---
+# Repository Configuration for Student API
+# This configures ArgoCD to access the GitHub repository
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: student-api-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: https://github.com/your-username/API_PROJECT
+  # For public repositories, no credentials needed
+  # For private repositories, add:
+  # username: your-github-username
+  # password: your-github-token
