@@ -1,0 +1,106 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-stack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: observability-stack
+    app.kubernetes.io/part-of: student-api
+    app.kubernetes.io/component: monitoring
+  annotations:
+    # Notifications annotations
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: student-api-alerts
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: student-api-alerts
+    # Additional metadata
+    argocd.argoproj.io/sync-wave: "2"  # Deploy after student-api
+spec:
+  # Project configuration
+  project: student-api-project
+  
+  # Source configuration
+  source:
+    repoURL: https://github.com/Ayush-Nigam-544/API_PROJECT.git
+    targetRevision: argocd
+    path: student-api/k8s/helm-charts/observability-stack
+    
+    # Helm configuration
+    helm:
+      # Use values files
+      valueFiles:
+        - values.yaml
+      
+      # Override values for node affinity
+      values: |
+        # Node selector for dependent_services node
+        global:
+          nodeSelector:
+            node-role: "dependent_services"
+        
+        # Apply node selector to all components
+        prometheus:
+          server:
+            nodeSelector:
+              node-role: "dependent_services"
+        
+        grafana:
+          nodeSelector:
+            node-role: "dependent_services"
+        
+        loki:
+          singleBinary:
+            nodeSelector:
+              node-role: "dependent_services"
+        
+        blackboxExporter:
+          nodeSelector:
+            node-role: "dependent_services"
+        
+        postgresExporter:
+          nodeSelector:
+            node-role: "dependent_services"
+          
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+    
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+      - ApplyOutOfSyncOnly=true
+    
+    # Retry configuration
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  # Health check configuration
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: ConfigMap
+      jsonPointers:
+        - /data
+
+  # Revision history
+  revisionHistoryLimit: 10
