@@ -24,7 +24,8 @@ studentApi:
       memory: 512Mi
     requests:
       cpu: 200m
-      memory: 256Mi      env:
+      memory: 256Mi      
+  env:
     DATABASE_URL: "postgresql://student_user:student_password@postgres:5432/students"
     REDIS_URL: "redis://redis:6379"
     FLASK_ENV: "production"
