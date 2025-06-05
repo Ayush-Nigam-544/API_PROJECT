@@ -180,11 +180,11 @@ loki:
     server:
       grpc_listen_port: 9095
       http_listen_port: 3100
-      
-  persistence:
-    enabled: true
-    size: 1Gi
-  
+    
+    persistence:
+      enabled: true
+      size: 1Gi
+
   singleBinary:
     # Temporarily remove node selector for testing
     # nodeSelector:
