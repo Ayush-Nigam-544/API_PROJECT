@@ -188,6 +188,7 @@ loki:
     persistence:
       enabled: true
       size: 1Gi
+      storageClass: "standard"
     resources:
       requests:
         cpu: 50m
@@ -197,13 +198,6 @@ loki:
         memory: 256Mi
     extraArgs:
       - -validation.allow-structured-metadata=false
-    extraVolumes:
-      - name: loki-data
-        emptyDir: {}
-    extraVolumeMounts:
-      - name: loki-data
-        mountPath: /var/loki
-        subPath: ""
         
   # Disable components not needed for SingleBinary
   backend:
