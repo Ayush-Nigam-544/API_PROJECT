@@ -171,10 +171,10 @@ loki:
       reject_old_samples: true
       reject_old_samples_max_age: 168h
       allow_structured_metadata: false
-      
-    # Add explicit validation config to disable structured metadata
-    validation:
-      allow_structured_metadata: false
+      max_cache_freshness_per_query: 10m
+      query_timeout: 300s
+      split_queries_by_interval: 15m
+      volume_enabled: true
       
     # Explicitly set server configuration for command line args
     server:
@@ -194,6 +194,8 @@ loki:
       limits:
         cpu: 200m
         memory: 256Mi
+    extraArgs:
+      - -validation.allow-structured-metadata=false
         
   # Disable components not needed for SingleBinary
   backend:
