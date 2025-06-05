@@ -180,8 +180,7 @@ loki:
     server:
       grpc_listen_port: 9095
       http_listen_port: 3100
-      
-  singleBinary:
+        singleBinary:
     # Temporarily remove node selector for testing
     # nodeSelector:
     #   type: "dependent_services"
@@ -198,6 +197,12 @@ loki:
         memory: 256Mi
     extraArgs:
       - -validation.allow-structured-metadata=false
+    extraVolumeMounts:
+      - name: data
+        mountPath: /var/loki
+    extraVolumes:
+      - name: data
+        emptyDir: {}
         
   # Disable components not needed for SingleBinary
   backend:
