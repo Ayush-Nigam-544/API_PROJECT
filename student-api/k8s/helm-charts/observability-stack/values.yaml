@@ -143,13 +143,16 @@ grafana:
 loki:
   enabled: true
   deploymentMode: SingleBinary
-  
-  loki:
+    loki:
     auth_enabled: false
     
     commonConfig:
       replication_factor: 1
-      
+      ring:
+        kvstore:
+          store: inmemory
+        instance_addr: 127.0.0.1
+        
     storage:
       type: 'filesystem'
       filesystem:
@@ -165,8 +168,7 @@ loki:
           index:
             prefix: index_
             period: 24h
-    
-    limits_config:
+      limits_config:
       retention_period: 168h
       reject_old_samples: true
       reject_old_samples_max_age: 168h
@@ -176,10 +178,17 @@ loki:
       split_queries_by_interval: 15m
       volume_enabled: true
       
+    # Ring configuration for single binary mode
+    memberlist:
+      join_members: []
+      
     # Explicitly set server configuration for command line args
     server:
       grpc_listen_port: 9095
       http_listen_port: 3100
+      
+    # Single binary target configuration
+    target: all
     
     persistence:
       enabled: true
@@ -197,21 +206,23 @@ loki:
         cpu: 500m
         memory: 512Mi
     extraArgs:
-      - -validation.allow-structured-metadata=false
-
-    # Health probes for Loki singleBinary
+      - -validation.allow-structured-metadata=false    # Health probes for Loki singleBinary
     readinessProbe:
       httpGet:
         path: /ready
-        port: 3100
-      initialDelaySeconds: 10
+        port: http-metrics
+      initialDelaySeconds: 30
       periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
     livenessProbe:
       httpGet:
-        path: /metrics
-        port: 3100
+        path: /ready
+        port: http-metrics
       initialDelaySeconds: 60
       periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
   
   # Disable components not needed for SingleBinary
   backend:
@@ -272,16 +283,20 @@ promtail:
   config:
     clients:
       - url: http://observability-stack-loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+        timeout: 10s
+        backoff_config:
+          min_period: 500ms
+          max_period: 5m
+          max_retries: 10
     scrape_configs:
       - job_name: kubernetes-pods
         kubernetes_sd_configs:
           - role: pod
         pipeline_stages:
-          - docker: {}
-        relabel_configs:
+          - docker: {}        relabel_configs:
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
-            regex: (default|observability|argocd)
+            regex: (default|monitoring|argocd)
           - action: replace
             source_labels: [__meta_kubernetes_pod_node_name]
             target_label: node_name
