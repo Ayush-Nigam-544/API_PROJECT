@@ -1,6 +1,5 @@
 # =============================================================================
 # PLG (Promtail, Loki, Grafana) + Prometheus Observability Stack
-# Helm chart-based configuration using official charts
 # =============================================================================
 
 # Global configuration
@@ -19,9 +18,6 @@ prometheus:
     enabled: true
 
   server:
-    # Temporarily remove node selector for testing
-    # nodeSelector:
-    #   type: "dependent_services"
     retention: "7d"
     persistentVolume:
       enabled: false
@@ -105,9 +101,6 @@ prometheus:
 # =============================================================================
 grafana:
   enabled: true
-  # Temporarily remove node selector for testing
-  # nodeSelector:
-  #   type: "dependent_services"
   admin:
     user: admin
     password: "admin123"
@@ -143,22 +136,26 @@ grafana:
 loki:
   enabled: true
   deploymentMode: SingleBinary
+
   loki:
     auth_enabled: false
-    
+
     commonConfig:
       replication_factor: 1
       ring:
         kvstore:
           store: inmemory
-        instance_addr: 127.0.0.1
-        
+        instance_addr: "$(POD_IP)"
+
+    memberlist:
+      join_members: []
+
     storage:
-      type: 'filesystem'
+      type: filesystem
       filesystem:
         chunks_directory: /var/loki/chunks
         rules_directory: /var/loki/rules
-        
+
     schemaConfig:
       configs:
         - from: 2020-10-24
@@ -168,36 +165,13 @@ loki:
           index:
             prefix: index_
             period: 24h
-      limits_config:
-      retention_period: 168h
-      reject_old_samples: true
-      reject_old_samples_max_age: 168h
-      allow_structured_metadata: false
-      max_cache_freshness_per_query: 10m
-      query_timeout: 300s
-      split_queries_by_interval: 15m
-      volume_enabled: true
-      
-    # Ring configuration for single binary mode
-    memberlist:
-      join_members: []
-      
-    # Explicitly set server configuration for command line args
-    server:
-      grpc_listen_port: 9095
-      http_listen_port: 3100
-      
-    # Single binary target configuration
-    target: all
-    
-    persistence:
-      enabled: true
-      size: 1Gi
 
   singleBinary:
-    # Temporarily remove node selector for testing
-    # nodeSelector:
-    #   type: "dependent_services"
+    extraEnv:
+      - name: POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
     resources:
       requests:
         cpu: 200m
@@ -206,12 +180,12 @@ loki:
         cpu: 500m
         memory: 512Mi
     extraArgs:
-      - -validation.allow-structured-metadata=false    # Health probes for Loki singleBinary
+      - -validation.allow-structured-metadata=false
     readinessProbe:
       httpGet:
         path: /ready
         port: http-metrics
-      initialDelaySeconds: 30
+      initialDelaySeconds: 60
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
@@ -223,57 +197,6 @@ loki:
       periodSeconds: 30
       timeoutSeconds: 5
       failureThreshold: 3
-  
-  # Disable components not needed for SingleBinary
-  backend:
-    replicas: 0
-  read:
-    replicas: 0
-  write:
-    replicas: 0
-  ingester:
-    replicas: 0
-  querier:
-    replicas: 0
-  queryFrontend:
-    replicas: 0
-  queryScheduler:
-    replicas: 0
-  distributor:
-    replicas: 0
-  compactor:
-    replicas: 0
-  indexGateway:
-    replicas: 0
-  bloomCompactor:
-    replicas: 0
-  bloomGateway:
-    replicas: 0
-  # Disable memory-intensive caching components for lightweight deployment
-  chunksCache:
-    enabled: false
-    replicas: 0
-  resultsCache:
-    enabled: false
-    replicas: 0
-  
-  # Explicitly disable caching StatefulSets
-  memcachedChunks:
-    enabled: false
-    replicas: 0
-  memcachedFrontend:
-    enabled: false
-    replicas: 0
-  memcachedIndexQueries:
-    enabled: false
-    replicas: 0
-  memcachedIndexWrites:
-    enabled: false
-    replicas: 0
-  
-  # Global memcached disable
-  memcached:
-    enabled: false
 
 # =============================================================================
 # PROMTAIL - Log Collection
@@ -293,7 +216,8 @@ promtail:
         kubernetes_sd_configs:
           - role: pod
         pipeline_stages:
-          - docker: {}        relabel_configs:
+          - docker: {}
+        relabel_configs:
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
             regex: (default|monitoring|argocd)
@@ -322,9 +246,6 @@ promtail:
 # =============================================================================
 blackboxExporter:
   enabled: true
-  # Temporarily remove node selector for testing
-  # nodeSelector:
-  #   type: "dependent_services"
   config:
     modules:
       http_2xx:
@@ -349,9 +270,6 @@ blackboxExporter:
 # =============================================================================
 postgresExporter:
   enabled: true
-  # Temporarily remove node selector for testing
-  # nodeSelector:
-  #   type: "dependent_services"
   config:
     datasource:
       host: "postgres.default.svc.cluster.local"
