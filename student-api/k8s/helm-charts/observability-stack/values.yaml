@@ -203,13 +203,13 @@ loki:
     readinessProbe:
       httpGet:
         path: /ready
-        port: http
+        port: 3100
       initialDelaySeconds: 10
       periodSeconds: 10
     livenessProbe:
       httpGet:
         path: /metrics
-        port: http
+        port: 3100
       initialDelaySeconds: 60
       periodSeconds: 30
   
