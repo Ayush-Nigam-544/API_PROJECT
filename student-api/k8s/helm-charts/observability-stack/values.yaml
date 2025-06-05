@@ -198,6 +198,20 @@ loki:
         memory: 512Mi
     extraArgs:
       - -validation.allow-structured-metadata=false
+
+    # Health probes for Loki singleBinary
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /metrics
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 30
   
   # Disable components not needed for SingleBinary
   backend:
