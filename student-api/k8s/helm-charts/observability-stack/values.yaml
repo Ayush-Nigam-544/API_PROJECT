@@ -172,6 +172,10 @@ loki:
       reject_old_samples_max_age: 168h
       allow_structured_metadata: false
       
+    # Add explicit validation config to disable structured metadata
+    validation:
+      allow_structured_metadata: false
+      
   singleBinary:
     # Temporarily remove node selector for testing
     # nodeSelector:
