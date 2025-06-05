@@ -188,7 +188,6 @@ loki:
     persistence:
       enabled: true
       size: 1Gi
-      storageClass: "standard"
     resources:
       requests:
         cpu: 50m
