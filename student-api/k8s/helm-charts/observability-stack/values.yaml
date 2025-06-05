@@ -198,13 +198,7 @@ loki:
         memory: 256Mi
     extraArgs:
       - -validation.allow-structured-metadata=false
-    extraVolumeMounts:
-      - name: data
-        mountPath: /var/loki
-    extraVolumes:
-      - name: data
-        emptyDir: {}
-        
+  
   # Disable components not needed for SingleBinary
   backend:
     replicas: 0
