@@ -210,11 +210,30 @@ loki:
     replicas: 0
   bloomGateway:
     replicas: 0
-  
   # Disable memory-intensive caching components for lightweight deployment
   chunksCache:
     enabled: false
+    replicas: 0
   resultsCache:
+    enabled: false
+    replicas: 0
+  
+  # Explicitly disable caching StatefulSets
+  memcachedChunks:
+    enabled: false
+    replicas: 0
+  memcachedFrontend:
+    enabled: false
+    replicas: 0
+  memcachedIndexQueries:
+    enabled: false
+    replicas: 0
+  memcachedIndexWrites:
+    enabled: false
+    replicas: 0
+  
+  # Global memcached disable
+  memcached:
     enabled: false
 
 # =============================================================================
